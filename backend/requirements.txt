@@ -9,3 +9,6 @@ tensorflow
 joblib
 speechrecognition
 gtts
+flask-cors
+python-dotenv
+

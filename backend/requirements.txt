@@ -1,5 +1,6 @@
 flask
 flask-socketio
+flask_cors
 eventlet
 psycopg2-binary
 numpy
@@ -9,6 +10,5 @@ tensorflow
 joblib
 speechrecognition
 gtts
-flask-cors
 python-dotenv
-
+gunicorn

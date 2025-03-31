@@ -3,7 +3,9 @@ import io from 'socket.io-client';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-const socket = io("http://localhost:5050"); // Make sure this matches your Flask port
+const socket = io("https://bgp-threat-detection-backend.onrender.com/", {
+  transports: ["websocket"],
+});
 
 function Dashboard() {
   const [alerts, setAlerts] = useState([]);
@@ -20,14 +22,14 @@ function Dashboard() {
   const handleUpload = async () => {
     const formData = new FormData();
     formData.append("file", file);
-    await fetch("http://localhost:5050/upload", {
+    await fetch("https://bgp-threat-detection-backend.onrender.com/upload", {
       method: "POST",
       body: formData,
     });
   };
 
   const handleDownload = async () => {
-    const response = await fetch("http://localhost:5050/download/sample");
+    const response = await fetch("https://bgp-threat-detection-backend.onrender.com/download/sample");
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");

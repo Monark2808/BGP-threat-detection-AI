@@ -3,7 +3,9 @@ import io from 'socket.io-client';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-const socket = io("http://localhost:5050"); // Make sure this matches your Flask port
+const backendUrl = process.env.REACT_APP_BACKEND_URL;
+
+const socket = io(backendUrl);
 
 function Dashboard() {
   const [alerts, setAlerts] = useState([]);

@@ -5,13 +5,16 @@ import os
 import datetime
 import joblib
 
+from dotenv import load_dotenv
+load_dotenv()
+
 # App Setup
 app = Flask(__name__)
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')  # No eventlet!
 
 # Optional Model Load
-MODEL_PATH = 'model/bgp_model.pkl'
+MODEL_PATH = os.getenv("MODEL_PATH", "model/bgp_model.pkl")
 model = joblib.load(MODEL_PATH) if os.path.exists(MODEL_PATH) else None
 
 # Upload Folder
@@ -52,5 +55,6 @@ def download(filename):
 
 # Run App (threading mode, not eventlet)
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5050, debug=True, allow_unsafe_werkzeug=True)
+    PORT = int(os.getenv("PORT", 5050))
+socketio.run(app, host='0.0.0.0', port=PORT, debug=True, allow_unsafe_werkzeug=True)
 

@@ -1,60 +1,70 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify
+from flask_socketio import SocketIO, emit
 from flask_cors import CORS
-from flask_socketio import SocketIO
 import os
 import datetime
-import joblib
 
-from dotenv import load_dotenv
-load_dotenv()
-
-# App Setup
+# Initialize Flask app and enable CORS for both HTTP and SocketIO
 app = Flask(__name__)
-CORS(app)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')  # No eventlet!
+CORS(app)  # Enable CORS for all routes
 
-# Optional Model Load
-MODEL_PATH = os.getenv("MODEL_PATH", "model/bgp_model.pkl")
-model = joblib.load(MODEL_PATH) if os.path.exists(MODEL_PATH) else None
+# Initialize SocketIO with app, allowing only the frontend to connect
+socketio = SocketIO(app, cors_allowed_origins="http://localhost:3000")  # Replace "*" with your frontend URL
 
-# Upload Folder
+# Set upload folder
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# File Upload or JSON Alert Input
+# File upload endpoint
 @app.route('/upload', methods=['POST'])
 def upload():
     if 'file' in request.files:
         file = request.files['file']
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], file.filename))
-        return jsonify({'message': 'File uploaded successfully'})
 
-    elif request.is_json:
-        data = request.get_json()
-        features = data.get('features')
-        if model and features:
-            prediction = model.predict([features])
-            if prediction[0] == 1:
-                alert = {
-                    "timestamp": datetime.datetime.now().isoformat(),
-                    "anomaly_type": "BGP Anomaly",
-                    "confidence_score": 0.95,
-                    "raw_data": str(features)
-                }
-                socketio.emit('alert', alert)
-                print("🔔 Alert sent")
-        return jsonify({'status': 'Processed'})
+        # Read and process the file to extract meaningful data
+        with open(os.path.join(app.config['UPLOAD_FOLDER'], file.filename), 'r') as f:
+            content = f.read()
 
-    return jsonify({'error': 'Invalid input'}), 400
+        # Example logic for dynamic anomaly detection
+        if "HIGH_CONFIDENCE" in content:
+            anomaly_type = "High Confidence Threat"
+            confidence_score = 1.0  # 100% confidence
+        else:
+            anomaly_type = "General Threat"
+            confidence_score = 0.75  # 75% confidence
 
-# File Download Endpoint
-@app.route('/download/<filename>', methods=['GET'])
-def download(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
+        # Emit an alert with dynamic data
+        socketio.emit('alert', {
+            'timestamp': datetime.datetime.now().isoformat(),
+            'anomaly_type': anomaly_type,
+            'confidence_score': confidence_score
+        })
 
-# Run App (threading mode, not eventlet)
+        return jsonify({'message': 'File uploaded and processed successfully'}), 200
+    return jsonify({'error': 'No file found'}), 400
+
+# Self-heal endpoint (trigger self-healing logic)
+@app.route('/trigger-heal', methods=['POST'])
+def trigger_heal():
+    # Extract data from request
+    data = request.get_json()
+    prefix = data.get('prefix')
+    next_hop = data.get('next_hop')
+
+    # Simulating self-healing process (this should be dynamic)
+    if prefix and next_hop:
+        # Simulate self-healing action
+        socketio.emit('alert', {
+            'timestamp': datetime.datetime.now().isoformat(),
+            'anomaly_type': 'Self-Heal Triggered',
+            'confidence_score': 1.0
+        })
+        return jsonify({'message': 'Self-heal triggered successfully'}), 200
+
+    return jsonify({'error': 'Invalid data for self-healing'}), 400
+
+# Run SocketIO with debug mode enabled
 if __name__ == '__main__':
-    PORT = int(os.getenv("PORT", 5050))
-socketio.run(app, host='0.0.0.0', port=PORT, debug=True, allow_unsafe_werkzeug=True)
-
+    socketio.run(app, host='0.0.0.0', port=5051, debug=True)
